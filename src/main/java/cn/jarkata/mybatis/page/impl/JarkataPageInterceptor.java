@@ -63,14 +63,19 @@ public class JarkataPageInterceptor implements Interceptor {
         if (totalCount <= 0) {
             logger.warn("分页查询数据为空，boundSql={},parameter={}", boundSql, parameter);
             return pageResponse;
+        } else {
+            logger.info("数据总数：{}", totalCount);
         }
-        MappedStatement pageStatment = createMappedStatement(statement, boundSql, pageRequest);
-        args[0] = pageStatment;
-        args[1] = parameter;
-        args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
-        Object proceed = invocation.proceed();
-        pageResponse.setData((List) proceed);
-        logger.info("返回对象：{}", proceed);
+        try {
+            MappedStatement pageStatment = createMappedStatement(statement, boundSql, pageRequest);
+            args[0] = pageStatment;
+            args[1] = parameter;
+            args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
+            Object proceed = invocation.proceed();
+            pageResponse.setData((List) proceed);
+        } finally {
+            logger.info("返回对象：{}", pageResponse);
+        }
         return pageResponse;
     }
 
@@ -99,28 +104,32 @@ public class JarkataPageInterceptor implements Interceptor {
      * @throws SQLException
      */
     private long getTotalCount(MappedStatement statement, BoundSql boundSql) throws SQLException {
-        Configuration configuration = statement.getConfiguration();
-        Environment environment = configuration.getEnvironment();
-        DataSource dataSource = environment.getDataSource();
-        Connection connection = dataSource.getConnection();
-        String sql = boundSql.getSql();
-        Object parmeterObject = boundSql.getParameterObject();
-        String countSql = "select count(1) from (" + sql + ") count";
-        logger.info("countSql={}", countSql);
-        PreparedStatement prepareStatement = connection.prepareStatement(countSql);
+        String sql = null;
+        Map<String, Object> parameterObjectMap = null;
+        try {
+            Configuration configuration = statement.getConfiguration();
+            Environment environment = configuration.getEnvironment();
+            DataSource dataSource = environment.getDataSource();
+            Connection connection = dataSource.getConnection();
+            sql = boundSql.getSql();
+            Object parmeterObject = boundSql.getParameterObject();
+            String countSql = "select count(1) from (" + sql + ") count";
+            PreparedStatement prepareStatement = connection.prepareStatement(countSql);
+            List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+            parameterObjectMap = (Map<String, Object>) parmeterObject;
+            for (int index = 0, len = parameterMappings.size(); index < len; index++) {
+                ParameterMapping parameterMapping = parameterMappings.get(index);
+                String property = parameterMapping.getProperty();
+                Object paramVal = parameterObjectMap.get(property);
+                prepareStatement.setObject(index + 1, paramVal);
+            }
 
-        List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-        Map<String, Object> parameterObjectMap = (Map<String, Object>) parmeterObject;
-        for (int index = 0, len = parameterMappings.size(); index < len; index++) {
-            ParameterMapping parameterMapping = parameterMappings.get(index);
-            String property = parameterMapping.getProperty();
-            Object paramVal = parameterObjectMap.get(property);
-            prepareStatement.setObject(index + 1, paramVal);
-        }
-        logger.info("参数：{}", parameterObjectMap);
-        ResultSet resultSet = prepareStatement.executeQuery();
-        if (resultSet.next()) {
-            return resultSet.getLong(1);
+            ResultSet resultSet = prepareStatement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getLong(1);
+            }
+        } finally {
+            logger.info("sql={},查询总数请求参数：{}", sql, parameterObjectMap);
         }
         return 0;
     }
