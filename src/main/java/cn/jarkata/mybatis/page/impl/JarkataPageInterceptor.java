@@ -89,6 +89,7 @@ public class JarkataPageInterceptor implements Interceptor {
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
         String sql = boundSql.getSql();
         sql = sql + " limit " + pageRequest.getOffset() + "," + pageRequest.getLimit();
+        sql = trimSql(sql);
         // 配置
         Configuration configuration = statement.getConfiguration();
         SqlSource pageBoundSql = new StaticSqlSource(configuration, sql, parameterMappings);
@@ -112,6 +113,7 @@ public class JarkataPageInterceptor implements Interceptor {
             DataSource dataSource = environment.getDataSource();
             Connection connection = dataSource.getConnection();
             sql = boundSql.getSql();
+            sql = trimSql(sql);
             Object parmeterObject = boundSql.getParameterObject();
             String countSql = "select count(1) from (" + sql + ") count";
             PreparedStatement prepareStatement = connection.prepareStatement(countSql);
@@ -134,6 +136,11 @@ public class JarkataPageInterceptor implements Interceptor {
         return 0;
     }
 
+    private String trimSql(String sql) {
+        sql = sql.replaceAll("\n", "");
+        sql = sql.replaceAll("\\s+", " ");
+        return sql;
+    }
 
     /**
      * 赋值查询的statement对象
