@@ -1,7 +1,6 @@
 package cn.jarkata.mybatis.page;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -14,16 +13,15 @@ public class PageResponse<T> extends ArrayList<T> {
     private final int pageNo;
     private final int pageSize;
     private long totalCount;
-    private int totalPage;
 
+    /**
+     * 赋值请求对象当前页码，每页的大小
+     *
+     * @param pageRequest 请求对象
+     */
     public PageResponse(PageRequest pageRequest) {
         this.pageNo = pageRequest.getPageNo();
         this.pageSize = pageRequest.getPageSize();
-    }
-
-    public PageResponse(int pageNo, int pageSize) {
-        this.pageNo = pageNo;
-        this.pageSize = pageSize;
     }
 
     public int getPageNo() {
@@ -49,14 +47,13 @@ public class PageResponse<T> extends ArrayList<T> {
         return totalCount / pageSize + 1;
     }
 
-
     public void setData(List<T> data) {
         this.addAll(data);
     }
 
     @Override
     public String toString() {
-        final StringBuffer buffer = new StringBuffer("PageResponse{");
+        final StringBuilder buffer = new StringBuilder("PageResponse{");
         buffer.append("pageNo=").append(pageNo);
         buffer.append(", pageSize=").append(pageSize);
         buffer.append(", totalCount=").append(totalCount);
