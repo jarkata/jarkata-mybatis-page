@@ -1,6 +1,7 @@
 package cn.jarkata.mybatis.page.impl;
 
 import cn.jarkata.mybatis.page.PageRequest;
+import cn.jarkata.mybatis.page.PageResponse;
 import org.apache.ibatis.builder.StaticSqlSource;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.*;
@@ -52,63 +53,86 @@ public class JarkataPageInterceptor implements Interceptor {
             return invocation.proceed();
         }
         //执行分页
-        logger.info("执行分页处理");
-        logger.info("分页参数：{}", parameter);
+        logger.info("执行分页处理,分页参数：{}", parameter);
         PageRequest pageRequest = (PageRequest) rowBounds;
-
         BoundSql boundSql = statement.getBoundSql(parameter);
-        System.out.println(boundSql);
+        PageResponse<Object> pageResponse = new PageResponse<>(pageRequest);
         //查询总数据
-        getTotalCount(statement, boundSql);
+        long totalCount = getTotalCount(statement, boundSql);
+        pageResponse.setTotalCount(totalCount);
+        if (totalCount <= 0) {
+            logger.warn("分页查询数据为空，boundSql={},parameter={}", boundSql, parameter);
+            return pageResponse;
+        }
+        MappedStatement pageStatment = createMappedStatement(statement, boundSql, pageRequest);
+        args[0] = pageStatment;
+        args[1] = parameter;
+        args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
+        Object proceed = invocation.proceed();
+        pageResponse.setData((List) proceed);
+        logger.info("返回对象：{}", proceed);
+        return pageResponse;
+    }
 
-        //
+    /**
+     * @param statement
+     * @param boundSql
+     * @param pageRequest
+     * @return
+     */
+    private MappedStatement createMappedStatement(MappedStatement statement, BoundSql boundSql, PageRequest pageRequest) {
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-        Object parameterObject = boundSql.getParameterObject();
-
         String sql = boundSql.getSql();
-
         sql = sql + " limit " + pageRequest.getOffset() + "," + pageRequest.getLimit();
         // 配置
         Configuration configuration = statement.getConfiguration();
         SqlSource pageBoundSql = new StaticSqlSource(configuration, sql, parameterMappings);
-
-        MappedStatement pageStatment = makeStatement(statement, pageBoundSql);
-        args[0] = pageStatment;
-        args[1] = parameterObject;
-        args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
-        return invocation.proceed();
+        return makeStatement(statement, pageBoundSql);
     }
 
-    private int getTotalCount(MappedStatement statement, BoundSql boundSql) throws SQLException {
+    /**
+     * 获取总记录数
+     *
+     * @param statement
+     * @param boundSql
+     * @return
+     * @throws SQLException
+     */
+    private long getTotalCount(MappedStatement statement, BoundSql boundSql) throws SQLException {
         Configuration configuration = statement.getConfiguration();
         Environment environment = configuration.getEnvironment();
         DataSource dataSource = environment.getDataSource();
         Connection connection = dataSource.getConnection();
         String sql = boundSql.getSql();
-
+        Object parmeterObject = boundSql.getParameterObject();
         String countSql = "select count(1) from (" + sql + ") count";
         logger.info("countSql={}", countSql);
         PreparedStatement prepareStatement = connection.prepareStatement(countSql);
 
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-        StringBuilder builder = new StringBuilder();
-        Map<String, Object> parameterObject = (Map<String, Object>) boundSql.getParameterObject();
+        Map<String, Object> parameterObjectMap = (Map<String, Object>) parmeterObject;
         for (int index = 0, len = parameterMappings.size(); index < len; index++) {
             ParameterMapping parameterMapping = parameterMappings.get(index);
             String property = parameterMapping.getProperty();
-            builder.append(parameterObject.get(property));
-            prepareStatement.setObject(index + 1, parameterObject.get(property));
+            Object paramVal = parameterObjectMap.get(property);
+            prepareStatement.setObject(index + 1, paramVal);
         }
-        logger.info("参数：{}", builder.toString());
+        logger.info("参数：{}", parameterObjectMap);
         ResultSet resultSet = prepareStatement.executeQuery();
         if (resultSet.next()) {
-            System.out.println(resultSet.getLong(1));
+            return resultSet.getLong(1);
         }
-        logger.info("mapping={},object={}", parameterMappings, parameterObject);
         return 0;
     }
 
 
+    /**
+     * 赋值查询的statement对象
+     *
+     * @param statement
+     * @param pageBoundSql SqlSource对象
+     * @return
+     */
     private MappedStatement makeStatement(MappedStatement statement, SqlSource pageBoundSql) {
         Configuration configuration = statement.getConfiguration();
         MappedStatement.Builder builder = new MappedStatement.Builder(configuration, statement.getId(), pageBoundSql, statement.getSqlCommandType());

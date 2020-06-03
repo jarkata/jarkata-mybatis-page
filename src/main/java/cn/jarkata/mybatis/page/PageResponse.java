@@ -1,6 +1,8 @@
 package cn.jarkata.mybatis.page;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * 分页响应对象
@@ -9,12 +11,14 @@ import java.util.ArrayList;
  */
 public class PageResponse<T> extends ArrayList<T> {
 
-    private int pageNo;
-    private int pageSize;
-    private int totalCount;
+    private final int pageNo;
+    private final int pageSize;
+    private long totalCount;
     private int totalPage;
 
-    public PageResponse() {
+    public PageResponse(PageRequest pageRequest) {
+        this.pageNo = pageRequest.getPageNo();
+        this.pageSize = pageRequest.getPageSize();
     }
 
     public PageResponse(int pageNo, int pageSize) {
@@ -26,32 +30,39 @@ public class PageResponse<T> extends ArrayList<T> {
         return pageNo;
     }
 
-    public void setPageNo(int pageNo) {
-        this.pageNo = pageNo;
-    }
-
     public int getPageSize() {
         return pageSize;
     }
 
-    public void setPageSize(int pageSize) {
-        this.pageSize = pageSize;
-    }
-
-    public int getTotalCount() {
+    public long getTotalCount() {
         return totalCount;
     }
 
-    public void setTotalCount(int totalCount) {
+    public void setTotalCount(long totalCount) {
         this.totalCount = totalCount;
     }
 
-    public int getTotalPage() {
-        return totalPage;
+    public long getTotalPage() {
+        if (totalCount <= 0) {
+            return 0;
+        }
+        return totalCount / pageSize + 1;
     }
 
-    public void setTotalPage(int totalPage) {
-        this.totalPage = totalPage;
+
+    public void setData(List<T> data) {
+        this.addAll(data);
     }
 
+    @Override
+    public String toString() {
+        final StringBuffer buffer = new StringBuffer("PageResponse{");
+        buffer.append("pageNo=").append(pageNo);
+        buffer.append(", pageSize=").append(pageSize);
+        buffer.append(", totalCount=").append(totalCount);
+        buffer.append(", totalPage=").append(getTotalPage());
+        buffer.append(", modCount=").append(modCount);
+        buffer.append('}');
+        return buffer.toString();
+    }
 }
