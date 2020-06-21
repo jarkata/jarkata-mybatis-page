@@ -10,6 +10,6 @@ Maven引用
 <dependency>
   <groupId>cn.jarkata</groupId>
   <artifactId>jarkata-mybatis-page</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 ```

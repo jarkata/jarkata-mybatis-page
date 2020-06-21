@@ -48,10 +48,6 @@ public class JarkataPageInterceptor implements Interceptor {
             logger.debug("未使用分页");
             return invocation.proceed();
         }
-        if (!(parameter instanceof Map)) {
-            logger.warn("分页参数不为map，不做分页处理,parameter={}", parameter);
-            return invocation.proceed();
-        }
         //执行分页
         logger.info("执行分页处理,分页参数：{}", parameter);
         PageRequest pageRequest = (PageRequest) rowBounds;
