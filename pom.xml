@@ -9,6 +9,7 @@
     <version>1.0.1</version>
 
     <name>jarkata-mybatis-page</name>
+    <description>jarkata mybatis page</description>
     <url>https://github.com/jarkata/jarkata-mybatis-page.git</url>
 
     <properties>
