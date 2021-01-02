@@ -41,6 +41,9 @@ public class PageResponse<T> extends ArrayList<T> {
     }
 
     public long getTotalPage() {
+        if (pageSize <= 0) {
+            return 0;
+        }
         if (totalCount <= 0) {
             return 0;
         }
