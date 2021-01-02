@@ -6,7 +6,7 @@
 
     <groupId>cn.jarkata</groupId>
     <artifactId>jarkata-mybatis-page</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 
     <name>jarkata-mybatis-page</name>
     <description>jarkata mybatis page</description>
