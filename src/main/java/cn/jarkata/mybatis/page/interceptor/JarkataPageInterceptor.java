@@ -25,7 +25,7 @@ import java.util.Map;
  * 分页查询的拦截器
  */
 @Intercepts(@Signature(type = Executor.class, method = "query",
-    args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
+        args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
 )
 public class JarkataPageInterceptor implements Interceptor {
 
@@ -34,7 +34,7 @@ public class JarkataPageInterceptor implements Interceptor {
     /**
      * 拦截方法
      *
-     * @param invocation
+     * @param invocation 拦截的参数对象
      * @return 返回分页查询返回等对象
      * @throws Throwable
      */
