@@ -1,4 +1,4 @@
-package cn.jarkata.mybatis.page.impl;
+package cn.jarkata.mybatis.page.interceptor;
 
 import cn.jarkata.mybatis.page.PageRequest;
 import cn.jarkata.mybatis.page.PageResponse;

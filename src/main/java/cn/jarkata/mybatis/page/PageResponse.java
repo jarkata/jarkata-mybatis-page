@@ -51,6 +51,10 @@ public class PageResponse<T> extends ArrayList<T> {
         this.addAll(data);
     }
 
+    public List<T> getData() {
+        return this;
+    }
+
     @Override
     public String toString() {
         final StringBuilder buffer = new StringBuilder("PageResponse{");
