@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -45,11 +46,34 @@ public class JarkataPageInterceptor implements Interceptor {
         Object parameter = args[1];
         Object rowBounds = args[2];
         if (!(rowBounds instanceof PageRequest)) {
-            logger.debug("未使用分页");
+            logger.debug("No Use Page");
             return invocation.proceed();
         }
-        //执行分页
-        logger.info("执行分页处理,分页参数：{}", parameter);
+        long start = System.currentTimeMillis();
+        PageResponse<Object> pageResponse = null;
+        try {
+            pageResponse = findPage(invocation);
+        } finally {
+            long dur = System.currentTimeMillis() - start;
+            logger.info("dur={}ms,ReturnObject：{}", dur, pageResponse);
+        }
+        return pageResponse;
+    }
+
+    /**
+     * 分页查询数据
+     *
+     * @param invocation 反射的代理对象
+     * @return 分页对象
+     * @throws SQLException
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
+    private PageResponse<Object> findPage(Invocation invocation) throws SQLException, InvocationTargetException, IllegalAccessException {
+        Object[] args = invocation.getArgs();
+        MappedStatement statement = (MappedStatement) args[0];
+        Object parameter = args[1];
+        Object rowBounds = args[2];
         PageRequest pageRequest = (PageRequest) rowBounds;
         BoundSql boundSql = statement.getBoundSql(parameter);
         PageResponse<Object> pageResponse = new PageResponse<>(pageRequest);
@@ -57,23 +81,20 @@ public class JarkataPageInterceptor implements Interceptor {
         long totalCount = getTotalCount(statement, boundSql);
         pageResponse.setTotalCount(totalCount);
         if (totalCount <= 0) {
-            logger.warn("分页查询数据为空，boundSql={},parameter={}", boundSql, parameter);
+            logger.warn("SelectResultEmpty，boundSql={},parameter={}", boundSql, parameter);
             return pageResponse;
         } else {
-            logger.info("数据总数：{}", totalCount);
+            logger.info("TotalCount：{}", totalCount);
         }
-        try {
-            MappedStatement pageStatment = createMappedStatement(statement, boundSql, pageRequest);
-            args[0] = pageStatment;
-            args[1] = parameter;
-            args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
-            Object proceed = invocation.proceed();
-            pageResponse.setData((List) proceed);
-        } finally {
-            logger.info("返回对象：{}", pageResponse);
-        }
+        MappedStatement pageStatment = createMappedStatement(statement, boundSql, pageRequest);
+        args[0] = pageStatment;
+        args[1] = parameter;
+        args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
+        Object proceed = invocation.proceed();
+        pageResponse.setData((List) proceed);
         return pageResponse;
     }
+
 
     /**
      * @param statement
@@ -101,17 +122,19 @@ public class JarkataPageInterceptor implements Interceptor {
      * @throws SQLException
      */
     private long getTotalCount(MappedStatement statement, BoundSql boundSql) throws SQLException {
-        String sql = null;
         Map<String, Object> parameterObjectMap = null;
+        String countSql = null;
+        long count = -1;
+        long start = System.currentTimeMillis();
         try {
             Configuration configuration = statement.getConfiguration();
             Environment environment = configuration.getEnvironment();
             DataSource dataSource = environment.getDataSource();
             Connection connection = dataSource.getConnection();
-            sql = boundSql.getSql();
+            String sql = boundSql.getSql();
             sql = trimSql(sql);
             Object parmeterObject = boundSql.getParameterObject();
-            String countSql = "select count(1) from (" + sql + ") count";
+            countSql = "select count(1) from (" + sql + ") count";
             PreparedStatement prepareStatement = connection.prepareStatement(countSql);
             List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
             parameterObjectMap = (Map<String, Object>) parmeterObject;
@@ -121,17 +144,23 @@ public class JarkataPageInterceptor implements Interceptor {
                 Object paramVal = parameterObjectMap.get(property);
                 prepareStatement.setObject(index + 1, paramVal);
             }
-
             ResultSet resultSet = prepareStatement.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getLong(1);
+                count = resultSet.getLong(1);
             }
         } finally {
-            logger.info("sql={},查询总数请求参数：{}", sql, parameterObjectMap);
+            long dur = System.currentTimeMillis() - start;
+            logger.info("dur={}ms,sql={},param:{}", dur, countSql, parameterObjectMap);
         }
-        return 0;
+        return count;
     }
 
+    /**
+     * 去除sql的格式
+     *
+     * @param sql sql语句
+     * @return 格式化之后的sql语句
+     */
     private String trimSql(String sql) {
         sql = sql.replaceAll("\n", "");
         sql = sql.replaceAll("\\s+", " ");
