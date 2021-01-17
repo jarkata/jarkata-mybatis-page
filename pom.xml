@@ -18,6 +18,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <slf4j-api.version>1.7.30</slf4j-api.version>
         <mybatis.version>3.5.6</mybatis.version>
+        <junit.version>4.12</junit.version>
     </properties>
 
     <dependencies>
@@ -35,7 +36,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
