@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -37,13 +36,11 @@ public class JarkataPageInterceptor implements Interceptor {
      *
      * @param invocation 拦截的参数对象
      * @return 返回分页查询返回等对象
-     * @throws Throwable
+     * @throws Throwable 查询发生异常
      */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Object[] args = invocation.getArgs();
-        MappedStatement statement = (MappedStatement) args[0];
-        Object parameter = args[1];
         Object rowBounds = args[2];
         if (!(rowBounds instanceof PageRequest)) {
             logger.debug("No Use Page");
@@ -65,11 +62,9 @@ public class JarkataPageInterceptor implements Interceptor {
      *
      * @param invocation 反射的代理对象
      * @return 分页对象
-     * @throws SQLException
-     * @throws InvocationTargetException
-     * @throws IllegalAccessException
+     * @throws Exception 查询异常
      */
-    private PageResponse<Object> findPage(Invocation invocation) throws SQLException, InvocationTargetException, IllegalAccessException {
+    private PageResponse<Object> findPage(Invocation invocation) throws Exception {
         Object[] args = invocation.getArgs();
         MappedStatement statement = (MappedStatement) args[0];
         Object parameter = args[1];
@@ -118,13 +113,13 @@ public class JarkataPageInterceptor implements Interceptor {
      *
      * @param statement
      * @param boundSql
-     * @return
-     * @throws SQLException
+     * @return 查询汇总结果
+     * @throws SQLException 查询异常
      */
     private long getTotalCount(MappedStatement statement, BoundSql boundSql) throws SQLException {
         Map<String, Object> parameterObjectMap = null;
         String countSql = null;
-        long count = -1;
+        long count = -1L;
         long start = System.currentTimeMillis();
         try {
             Configuration configuration = statement.getConfiguration();
@@ -170,9 +165,8 @@ public class JarkataPageInterceptor implements Interceptor {
     /**
      * 赋值查询的statement对象
      *
-     * @param statement
+     * @param statement    statement对象
      * @param pageBoundSql SqlSource对象
-     * @return
      */
     private MappedStatement makeStatement(MappedStatement statement, SqlSource pageBoundSql) {
         Configuration configuration = statement.getConfiguration();
