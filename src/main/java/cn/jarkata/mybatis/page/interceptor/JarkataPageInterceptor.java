@@ -19,6 +19,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 
 /**
@@ -121,16 +122,19 @@ public class JarkataPageInterceptor implements Interceptor {
         String countSql = null;
         long count = -1L;
         long start = System.currentTimeMillis();
+        Connection connection = null;
+        ResultSet resultSet = null;
+        PreparedStatement prepareStatement = null;
         try {
             Configuration configuration = statement.getConfiguration();
             Environment environment = configuration.getEnvironment();
             DataSource dataSource = environment.getDataSource();
-            Connection connection = dataSource.getConnection();
+            connection = dataSource.getConnection();
             String sql = boundSql.getSql();
             sql = trimSql(sql);
             Object parmeterObject = boundSql.getParameterObject();
             countSql = "select count(1) from (" + sql + ") count";
-            PreparedStatement prepareStatement = connection.prepareStatement(countSql);
+            prepareStatement = connection.prepareStatement(countSql);
             List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
             parameterObjectMap = (Map<String, Object>) parmeterObject;
             for (int index = 0, len = parameterMappings.size(); index < len; index++) {
@@ -139,11 +143,20 @@ public class JarkataPageInterceptor implements Interceptor {
                 Object paramVal = parameterObjectMap.get(property);
                 prepareStatement.setObject(index + 1, paramVal);
             }
-            ResultSet resultSet = prepareStatement.executeQuery();
+            resultSet = prepareStatement.executeQuery();
             if (resultSet.next()) {
                 count = resultSet.getLong(1);
             }
         } finally {
+            if (Objects.nonNull(resultSet)) {
+                resultSet.close();
+            }
+            if (Objects.nonNull(prepareStatement)) {
+                prepareStatement.close();
+            }
+            if (Objects.nonNull(connection)) {
+                connection.close();
+            }
             long dur = System.currentTimeMillis() - start;
             logger.info("dur={}ms,sql={},param:{}", dur, countSql, parameterObjectMap);
         }
