@@ -10,9 +10,15 @@ import java.util.List;
  */
 public class PageResponse<T> extends ArrayList<T> {
 
-    private final int pageNo;
-    private final int pageSize;
+    private int pageNo;
+    private int pageSize;
     private long totalCount;
+
+    public PageResponse() {
+        pageNo = 1;
+        pageSize = 10;
+    }
+
 
     /**
      * 赋值请求对象当前页码，每页的大小
@@ -34,6 +40,14 @@ public class PageResponse<T> extends ArrayList<T> {
 
     public long getTotalCount() {
         return totalCount;
+    }
+
+    public void setPageNo(int pageNo) {
+        this.pageNo = pageNo;
+    }
+
+    public void setPageSize(int pageSize) {
+        this.pageSize = pageSize;
     }
 
     public void setTotalCount(long totalCount) {
