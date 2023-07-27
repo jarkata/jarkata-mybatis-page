@@ -2,6 +2,7 @@ package cn.jarkata.mybatis.page.interceptor;
 
 import cn.jarkata.mybatis.page.PageRequest;
 import cn.jarkata.mybatis.page.PageResponse;
+import cn.jarkata.mybatis.page.ReflectionUtils;
 import org.apache.ibatis.builder.StaticSqlSource;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.*;
@@ -25,9 +26,7 @@ import java.util.Objects;
 /**
  * 分页查询的拦截器
  */
-@Intercepts(@Signature(type = Executor.class, method = "query",
-        args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
-)
+@Intercepts(@Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}))
 public class JarkataPageInterceptor implements Interceptor {
 
     private final Logger logger = LoggerFactory.getLogger(JarkataPageInterceptor.class);
@@ -118,7 +117,7 @@ public class JarkataPageInterceptor implements Interceptor {
      * @throws SQLException 查询异常
      */
     private long getTotalCount(MappedStatement statement, BoundSql boundSql) throws SQLException {
-        Map<String, Object> parameterObjectMap = null;
+        Object parmeterObject = null;
         String countSql = null;
         long count = -1L;
         long start = System.currentTimeMillis();
@@ -132,15 +131,21 @@ public class JarkataPageInterceptor implements Interceptor {
             connection = dataSource.getConnection();
             String sql = boundSql.getSql();
             sql = trimSql(sql);
-            Object parmeterObject = boundSql.getParameterObject();
-            countSql = "select count(1) from (" + sql + ") count";
+            parmeterObject = boundSql.getParameterObject();
+            countSql = "select count(1) from (" + sql + ") tmp";
             prepareStatement = connection.prepareStatement(countSql);
             List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-            parameterObjectMap = (Map<String, Object>) parmeterObject;
+
             for (int index = 0, len = parameterMappings.size(); index < len; index++) {
                 ParameterMapping parameterMapping = parameterMappings.get(index);
                 String property = parameterMapping.getProperty();
-                Object paramVal = parameterObjectMap.get(property);
+                Object paramVal;
+                if (parmeterObject instanceof Map) {
+                    Map<String, Object> parameterObjectMap = (Map<String, Object>) parmeterObject;
+                    paramVal = parameterObjectMap.get(property);
+                } else {
+                    paramVal = ReflectionUtils.getFieldValue(parmeterObject, property);
+                }
                 prepareStatement.setObject(index + 1, paramVal);
             }
             resultSet = prepareStatement.executeQuery();
@@ -158,7 +163,7 @@ public class JarkataPageInterceptor implements Interceptor {
                 connection.close();
             }
             long dur = System.currentTimeMillis() - start;
-            logger.info("dur={}ms,sql={},param:{}", dur, countSql, parameterObjectMap);
+            logger.info("dur={}ms,sql={},param:{}", dur, countSql, parmeterObject);
         }
         return count;
     }
