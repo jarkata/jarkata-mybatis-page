@@ -81,8 +81,8 @@ public class JarkataPageInterceptor implements Interceptor {
         } else {
             logger.info("TotalCount：{}", totalCount);
         }
-        MappedStatement pageStatment = createMappedStatement(statement, boundSql, pageRequest);
-        args[0] = pageStatment;
+        MappedStatement pageStatement = createMappedStatement(statement, boundSql, pageRequest);
+        args[0] = pageStatement;
         args[1] = parameter;
         args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
         Object proceed = invocation.proceed();
