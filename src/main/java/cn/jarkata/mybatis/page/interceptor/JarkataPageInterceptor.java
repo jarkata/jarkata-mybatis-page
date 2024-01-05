@@ -92,9 +92,7 @@ public class JarkataPageInterceptor implements Interceptor {
 
 
     /**
-     * @param statement
-     * @param pageRequest
-     * @return
+     * @return 映射句柄
      */
     private MappedStatement createMappedStatement(MappedStatement statement, PageRequest pageRequest) {
         // 配置
@@ -107,8 +105,6 @@ public class JarkataPageInterceptor implements Interceptor {
     /**
      * 获取总记录数
      *
-     * @param statement
-     * @param boundSql
      * @return 查询汇总结果
      * @throws SQLException 查询异常
      */
