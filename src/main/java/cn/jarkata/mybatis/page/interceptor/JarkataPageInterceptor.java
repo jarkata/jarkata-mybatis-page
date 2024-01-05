@@ -1,9 +1,9 @@
 package cn.jarkata.mybatis.page.interceptor;
 
+import cn.jarkata.mybatis.page.DynamicPageSqlSource;
 import cn.jarkata.mybatis.page.PageRequest;
 import cn.jarkata.mybatis.page.PageResponse;
 import cn.jarkata.mybatis.page.ReflectionUtils;
-import org.apache.ibatis.builder.StaticSqlSource;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.plugin.*;
@@ -47,7 +47,7 @@ public class JarkataPageInterceptor implements Interceptor {
             return invocation.proceed();
         }
         long start = System.currentTimeMillis();
-        PageResponse<Object> pageResponse = null;
+        PageResponse<Object> pageResponse = new PageResponse<>();
         try {
             pageResponse = findPage(invocation);
         } finally {
@@ -81,10 +81,10 @@ public class JarkataPageInterceptor implements Interceptor {
         } else {
             logger.info("TotalCount：{}", totalCount);
         }
-        MappedStatement pageStatement = createMappedStatement(statement, boundSql, pageRequest);
+        MappedStatement pageStatement = createMappedStatement(statement, pageRequest);
         args[0] = pageStatement;
         args[1] = parameter;
-        args[2] = new RowBounds(RowBounds.NO_ROW_OFFSET, RowBounds.NO_ROW_LIMIT);
+        args[2] = RowBounds.DEFAULT;
         Object proceed = invocation.proceed();
         pageResponse.setData((List) proceed);
         return pageResponse;
@@ -93,18 +93,14 @@ public class JarkataPageInterceptor implements Interceptor {
 
     /**
      * @param statement
-     * @param boundSql
      * @param pageRequest
      * @return
      */
-    private MappedStatement createMappedStatement(MappedStatement statement, BoundSql boundSql, PageRequest pageRequest) {
-        List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-        String sql = boundSql.getSql();
-        sql = sql + " limit " + pageRequest.getOffset() + "," + pageRequest.getLimit();
-        sql = trimSql(sql);
+    private MappedStatement createMappedStatement(MappedStatement statement, PageRequest pageRequest) {
         // 配置
         Configuration configuration = statement.getConfiguration();
-        SqlSource pageBoundSql = new StaticSqlSource(configuration, sql, parameterMappings);
+        SqlSource sqlSource = statement.getSqlSource();
+        SqlSource pageBoundSql = new DynamicPageSqlSource(configuration, sqlSource, pageRequest);
         return makeStatement(statement, pageBoundSql);
     }
 
@@ -129,27 +125,12 @@ public class JarkataPageInterceptor implements Interceptor {
             Environment environment = configuration.getEnvironment();
             DataSource dataSource = environment.getDataSource();
             connection = dataSource.getConnection();
-            String sql = boundSql.getSql();
-            sql = trimSql(sql);
             parmeterObject = boundSql.getParameterObject();
-            countSql = "select count(1) from (" + sql + ") tmp";
+            countSql = genCountSql(boundSql);
             prepareStatement = connection.prepareStatement(countSql);
-            List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-
-            for (int index = 0, len = parameterMappings.size(); index < len; index++) {
-                ParameterMapping parameterMapping = parameterMappings.get(index);
-                String property = parameterMapping.getProperty();
-                Object paramVal;
-                if (parmeterObject instanceof Map) {
-                    Map<String, Object> parameterObjectMap = (Map<String, Object>) parmeterObject;
-                    paramVal = parameterObjectMap.get(property);
-                } else {
-                    paramVal = ReflectionUtils.getFieldValue(parmeterObject, property);
-                }
-                prepareStatement.setObject(index + 1, paramVal);
-            }
+            bindParameter(boundSql, prepareStatement);
             resultSet = prepareStatement.executeQuery();
-            if (resultSet.next()) {
+            if (Objects.nonNull(resultSet) && resultSet.next()) {
                 count = resultSet.getLong(1);
             }
         } finally {
@@ -166,6 +147,40 @@ public class JarkataPageInterceptor implements Interceptor {
             logger.info("dur={}ms,sql={},param:{}", dur, countSql, parmeterObject);
         }
         return count;
+    }
+
+    private String genCountSql(BoundSql boundSql) {
+        String sql = boundSql.getSql();
+        sql = trimSql(sql);
+        int fromIndex = sql.toLowerCase().lastIndexOf("from");
+        if (fromIndex <= 0) {
+            throw new IllegalArgumentException("");
+        }
+        String tmpSuffix = sql.substring(fromIndex);
+        return "SELECT count(1) " + tmpSuffix;
+    }
+
+
+    private void bindParameter(BoundSql boundSql, PreparedStatement preparedStatement) throws SQLException {
+        List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+        for (int index = 0, len = parameterMappings.size(); index < len; index++) {
+            ParameterMapping parameterMapping = parameterMappings.get(index);
+            String mappingProperty = parameterMapping.getProperty();
+            if (boundSql.hasAdditionalParameter(mappingProperty)) {
+                Object parameter = boundSql.getAdditionalParameter(mappingProperty);
+                preparedStatement.setObject(index + 1, parameter);
+                continue;
+            }
+            Object parameterObject = boundSql.getParameterObject();
+            Object paramVal;
+            if (parameterObject instanceof Map) {
+                Map<String, Object> parameterObjectMap = (Map<String, Object>) parameterObject;
+                paramVal = parameterObjectMap.get(mappingProperty);
+            } else {
+                paramVal = ReflectionUtils.getFieldValue(parameterObject, mappingProperty);
+            }
+            preparedStatement.setObject(index + 1, paramVal);
+        }
     }
 
     /**
