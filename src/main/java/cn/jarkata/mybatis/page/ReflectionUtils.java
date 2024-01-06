@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ReflectionUtils {
 
-    private static final Map<Class<?>, Field> fieldCache = new ConcurrentHashMap<>();
+    private static final Map<String, Field> fieldCache = new ConcurrentHashMap<>();
 
     public static Object getFieldValue(Object obj, String fieldName) {
         if (Objects.isNull(obj)) {
@@ -34,7 +34,8 @@ public class ReflectionUtils {
         if (Object.class.getSimpleName().equals(clazz.getSimpleName())) {
             return null;
         }
-        Field declaredField = fieldCache.get(clazz);
+        String cacheKey = buildCacheKey(clazz, fieldName);
+        Field declaredField = fieldCache.get(cacheKey);
         if (Objects.nonNull(declaredField)) {
             return declaredField;
         }
@@ -44,8 +45,12 @@ public class ReflectionUtils {
             declaredField = getField(clazz.getSuperclass(), fieldName);
         }
         if (Objects.nonNull(declaredField)) {
-            fieldCache.put(clazz, declaredField);
+            fieldCache.put(cacheKey, declaredField);
         }
         return declaredField;
+    }
+
+    private static String buildCacheKey(Class<?> clazz, String fieldName) {
+        return clazz.getName() + "_" + fieldName;
     }
 }
