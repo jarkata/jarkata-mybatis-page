@@ -1,9 +1,6 @@
 package cn.jarkata.mybatis.page.interceptor;
 
-import cn.jarkata.mybatis.page.DynamicPageSqlSource;
-import cn.jarkata.mybatis.page.PageRequest;
-import cn.jarkata.mybatis.page.PageResponse;
-import cn.jarkata.mybatis.page.ReflectionUtils;
+import cn.jarkata.mybatis.page.*;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.plugin.*;
@@ -145,15 +142,9 @@ public class JarkataPageInterceptor implements Interceptor {
         return count;
     }
 
-    private String genCountSql(BoundSql boundSql) {
+    protected String genCountSql(BoundSql boundSql) {
         String sql = boundSql.getSql();
-        sql = trimSql(sql);
-        int fromIndex = sql.toLowerCase().lastIndexOf("from");
-        if (fromIndex <= 0) {
-            throw new IllegalArgumentException("");
-        }
-        String tmpSuffix = sql.substring(fromIndex);
-        return "SELECT count(1) " + tmpSuffix;
+        return SqlUtils.genCountSql(sql);
     }
 
 
