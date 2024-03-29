@@ -1,5 +1,7 @@
 package cn.jarkata.mybatis.page;
 
+import cn.jarkata.commons.utils.StringUtils;
+
 public class SqlUtils {
 
     public static String genCountSql(String sql) {
@@ -20,8 +22,8 @@ public class SqlUtils {
     }
 
     private static String trimSql(String sql) {
-        sql = sql.replaceAll("\n", "");
-        sql = sql.replaceAll("\\s+", " ");
+        sql = StringUtils.replaceBlank(sql);
+        sql = StringUtils.trimSpecialChar(sql);
         return sql;
     }
 }

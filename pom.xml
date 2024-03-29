@@ -6,7 +6,7 @@
 
     <groupId>cn.jarkata</groupId>
     <artifactId>jarkata-mybatis-page</artifactId>
-    <version>2.0.8</version>
+    <version>2.0.9</version>
 
     <name>jarkata-mybatis-page</name>
     <description>jarkata mybatis page</description>
@@ -17,11 +17,17 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <junit.version>4.13.2</junit.version>
-        <slf4j-api.version>2.0.5</slf4j-api.version>
+        <slf4j-api.version>1.7.32</slf4j-api.version>
         <mybatis.version>3.5.13</mybatis.version>
+        <jarkata-commons.version>2.0.13</jarkata-commons.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>cn.jarkata</groupId>
+            <artifactId>jarkata-commons</artifactId>
+            <version>${jarkata-commons.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
