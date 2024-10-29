@@ -6,7 +6,7 @@
 
     <groupId>cn.jarkata</groupId>
     <artifactId>jarkata-mybatis-page</artifactId>
-    <version>2.0.9</version>
+    <version>2.0.10</version>
 
     <name>jarkata-mybatis-page</name>
     <description>jarkata mybatis page</description>
@@ -113,18 +113,18 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.8</version>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.6.0</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <serverId>sonatype_releases</serverId>
-                    <nexusUrl>https://oss.sonatype.org</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
     <distributionManagement>
         <snapshotRepository>
             <id>sonatype_snapshots</id>
